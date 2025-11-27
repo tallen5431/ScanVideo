@@ -455,19 +455,32 @@
         async function autoCalibrate() {
             if (calibrated || cameraMode !== 'browser') return;
 
-            const canvas = document.createElement('canvas');
-            canvas.width = browserVideo.videoWidth;
-            canvas.height = browserVideo.videoHeight;
-
             // Skip if video not ready
-            if (canvas.width === 0 || canvas.height === 0) {
+            if (browserVideo.videoWidth === 0 || browserVideo.videoHeight === 0) {
                 return;
             }
 
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(browserVideo, 0, 0);
+            // Create canvas with reduced size to minimize payload
+            const canvas = document.createElement('canvas');
+            const maxWidth = 800;
+            const maxHeight = 600;
+            let width = browserVideo.videoWidth;
+            let height = browserVideo.videoHeight;
 
-            const frameData = canvas.toDataURL('image/jpeg', 0.8);
+            // Scale down if necessary
+            if (width > maxWidth || height > maxHeight) {
+                const scale = Math.min(maxWidth / width, maxHeight / height);
+                width = Math.floor(width * scale);
+                height = Math.floor(height * scale);
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(browserVideo, 0, 0, width, height);
+
+            const frameData = canvas.toDataURL('image/jpeg', 0.6);
 
             try {
                 const response = await fetch('/api/calibrate_frame', {
@@ -595,19 +608,32 @@
             try {
                 showAlert('Looking for calibration square...', 'info');
 
-                const canvas = document.createElement('canvas');
-                canvas.width = browserVideo.videoWidth;
-                canvas.height = browserVideo.videoHeight;
-
-                if (canvas.width === 0 || canvas.height === 0) {
+                if (browserVideo.videoWidth === 0 || browserVideo.videoHeight === 0) {
                     showAlert('Camera not ready. Please wait...', 'error');
                     return;
                 }
 
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(browserVideo, 0, 0);
+                // Create canvas with reduced size to minimize payload
+                const canvas = document.createElement('canvas');
+                const maxWidth = 800;
+                const maxHeight = 600;
+                let width = browserVideo.videoWidth;
+                let height = browserVideo.videoHeight;
 
-                const frameData = canvas.toDataURL('image/jpeg', 0.8);
+                // Scale down if necessary
+                if (width > maxWidth || height > maxHeight) {
+                    const scale = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.floor(width * scale);
+                    height = Math.floor(height * scale);
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(browserVideo, 0, 0, width, height);
+
+                const frameData = canvas.toDataURL('image/jpeg', 0.6);
 
                 const response = await fetch('/api/calibrate_frame', {
                     method: 'POST',

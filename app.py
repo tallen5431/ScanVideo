@@ -624,7 +624,8 @@ if __name__ == "__main__":
     
     try:
         from waitress import serve
-        serve(app, host=HOST, port=PORT)
+        # Increase max request body size to 10MB for base64 image uploads
+        serve(app, host=HOST, port=PORT, max_request_body_size=10485760)
     except ImportError:
         print("Waitress not installed, using Flask development server")
         app.run(host=HOST, port=PORT, debug=False)
