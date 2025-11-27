@@ -300,9 +300,13 @@
 
         <div class="main-content">
             <div class="video-section">
-                <img id="videoFeed" alt="Video Feed" style="display: none;">
-                <video id="browserVideo" autoplay playsinline></video>
-                <div id="loading" class="loading">Initializing camera...</div>
+                <div style="position: relative; display: inline-block; max-width: 100%;">
+                    <img id="videoFeed" alt="Video Feed" style="display: none; max-width: 100%; height: auto;">
+                    <video id="browserVideo" autoplay playsinline style="max-width: 100%; height: auto;"></video>
+                    <canvas id="overlayCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+                    <img id="capturedImage" alt="Captured Frame" style="display: none; max-width: 100%; height: auto; cursor: crosshair;">
+                    <div id="loading" class="loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">Initializing camera...</div>
+                </div>
             </div>
 
             <div class="controls">
@@ -346,6 +350,8 @@
 
                 <div class="button-group">
                     <button id="calibrateBtn" class="btn-success">🎯 Detect Calibration Square</button>
+                    <button id="captureBtn" class="btn-primary" style="display: none;">📸 Capture Frame for Measurement</button>
+                    <button id="retakeBtn" class="btn-info" style="display: none;">🔄 Retake</button>
                     <button id="clearPointsBtn" class="btn-danger">🗑️ Clear Points</button>
                     <button id="resetCalibrationBtn" class="btn-secondary">🔄 Reset Calibration</button>
                 </div>
@@ -373,6 +379,9 @@
 
         const videoFeed = document.getElementById('videoFeed');
         const browserVideo = document.getElementById('browserVideo');
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const overlayCtx = overlayCanvas.getContext('2d');
+        const capturedImage = document.getElementById('capturedImage');
         const loading = document.getElementById('loading');
         const alertBox = document.getElementById('alertBox');
         const calibrationStatus = document.getElementById('calibrationStatus');
@@ -380,6 +389,120 @@
         const pointsCount = document.getElementById('pointsCount');
         const measurementsList = document.getElementById('measurementsList');
         const measurementsDiv = document.getElementById('measurements');
+
+        let isCaptured = false;
+        let capturedPoints = [];
+
+        // Update canvas size to match video
+        function updateCanvasSize() {
+            if (cameraMode === 'browser' && browserVideo.videoWidth > 0) {
+                const rect = browserVideo.getBoundingClientRect();
+                overlayCanvas.width = browserVideo.videoWidth;
+                overlayCanvas.height = browserVideo.videoHeight;
+                overlayCanvas.style.width = rect.width + 'px';
+                overlayCanvas.style.height = rect.height + 'px';
+            }
+        }
+
+        // Draw measurement overlays on canvas
+        function drawOverlay() {
+            if (!isCaptured || capturedPoints.length === 0) return;
+
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            // Draw points
+            capturedPoints.forEach((point, i) => {
+                overlayCtx.fillStyle = '#FF0000';
+                overlayCtx.beginPath();
+                overlayCtx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+                overlayCtx.fill();
+
+                // Draw number
+                overlayCtx.fillStyle = '#FFFFFF';
+                overlayCtx.strokeStyle = '#FF0000';
+                overlayCtx.font = 'bold 16px Arial';
+                overlayCtx.lineWidth = 3;
+                overlayCtx.strokeText(String(i + 1), point.x + 10, point.y - 10);
+                overlayCtx.fillText(String(i + 1), point.x + 10, point.y - 10);
+            });
+
+            // Draw lines between points
+            if (capturedPoints.length >= 2) {
+                overlayCtx.strokeStyle = '#FF0000';
+                overlayCtx.lineWidth = 2;
+                overlayCtx.beginPath();
+                overlayCtx.moveTo(capturedPoints[0].x, capturedPoints[0].y);
+                for (let i = 1; i < capturedPoints.length; i++) {
+                    overlayCtx.lineTo(capturedPoints[i].x, capturedPoints[i].y);
+                }
+                overlayCtx.stroke();
+            }
+
+            // Show distance for 2 points
+            if (capturedPoints.length === 2 && calibrated && pixelsPerMm) {
+                const dx = capturedPoints[1].x - capturedPoints[0].x;
+                const dy = capturedPoints[1].y - capturedPoints[0].y;
+                const pixelDist = Math.sqrt(dx * dx + dy * dy);
+                const mmDist = pixelDist / pixelsPerMm;
+
+                const midX = (capturedPoints[0].x + capturedPoints[1].x) / 2;
+                const midY = (capturedPoints[0].y + capturedPoints[1].y) / 2;
+
+                overlayCtx.fillStyle = '#FFFFFF';
+                overlayCtx.strokeStyle = '#FF0000';
+                overlayCtx.font = 'bold 20px Arial';
+                overlayCtx.lineWidth = 4;
+                overlayCtx.strokeText(`${mmDist.toFixed(1)} mm`, midX, midY);
+                overlayCtx.fillText(`${mmDist.toFixed(1)} mm`, midX, midY);
+            }
+        }
+
+        // Capture current frame
+        function captureFrame() {
+            if (!calibrated) {
+                showAlert('Please calibrate first!', 'error');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = browserVideo.videoWidth;
+            canvas.height = browserVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(browserVideo, 0, 0);
+
+            capturedImage.src = canvas.toDataURL('image/jpeg', 0.9);
+            capturedImage.style.display = 'block';
+            browserVideo.style.display = 'none';
+            overlayCanvas.style.display = 'block';
+
+            updateCanvasSize();
+
+            isCaptured = true;
+            capturedPoints = [];
+
+            document.getElementById('captureBtn').style.display = 'none';
+            document.getElementById('retakeBtn').style.display = 'inline-block';
+            document.getElementById('calibrateBtn').style.display = 'none';
+
+            showAlert('Frame captured! Click on the image to add measurement points.', 'success');
+        }
+
+        // Retake photo
+        function retakeFrame() {
+            capturedImage.style.display = 'none';
+            browserVideo.style.display = 'block';
+            overlayCanvas.style.display = 'none';
+
+            isCaptured = false;
+            capturedPoints = [];
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            document.getElementById('captureBtn').style.display = calibrated ? 'inline-block' : 'none';
+            document.getElementById('retakeBtn').style.display = 'none';
+            document.getElementById('calibrateBtn').style.display = 'inline-block';
+
+            clearPoints();
+        }
 
         // Mode selector
         document.querySelectorAll('input[name="cameraMode"]').forEach(radio => {
@@ -562,15 +685,21 @@
                 calibrationStatus.textContent = '✅ Calibrated';
                 calibrationStatus.className = 'status-value calibrated';
                 pixelsPerMmDisplay.textContent = pixelsPerMm ? pixelsPerMm.toFixed(2) : '-';
+
+                // Show capture button if not already captured
+                if (!isCaptured && cameraMode === 'browser') {
+                    document.getElementById('captureBtn').style.display = 'inline-block';
+                }
             } else {
                 calibrationStatus.textContent = '❌ Not Calibrated';
                 calibrationStatus.className = 'status-value not-calibrated';
                 pixelsPerMmDisplay.textContent = '-';
+                document.getElementById('captureBtn').style.display = 'none';
             }
 
-            pointsCount.textContent = measurementPoints;
+            pointsCount.textContent = isCaptured ? capturedPoints.length : measurementPoints;
 
-            if (measurementPoints > 0) {
+            if ((isCaptured && capturedPoints.length > 0) || measurementPoints > 0) {
                 measurementsDiv.style.display = 'block';
             } else {
                 measurementsDiv.style.display = 'none';
@@ -771,8 +900,24 @@
 
         // Event listeners
         document.getElementById('calibrateBtn').addEventListener('click', calibrate);
-        document.getElementById('clearPointsBtn').addEventListener('click', clearPoints);
+        document.getElementById('captureBtn').addEventListener('click', captureFrame);
+        document.getElementById('retakeBtn').addEventListener('click', retakeFrame);
+        document.getElementById('clearPointsBtn').addEventListener('click', () => {
+            if (isCaptured) {
+                capturedPoints = [];
+                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                updateStatusDisplay();
+                measurementsList.innerHTML = '';
+                showAlert('Points cleared', 'info');
+            } else {
+                clearPoints();
+            }
+        });
         document.getElementById('resetCalibrationBtn').addEventListener('click', resetCalibration);
+
+        // Update canvas size when video loads
+        browserVideo.addEventListener('loadedmetadata', updateCanvasSize);
+        window.addEventListener('resize', updateCanvasSize);
 
         videoFeed.addEventListener('click', (e) => {
             const rect = videoFeed.getBoundingClientRect();
@@ -782,8 +927,8 @@
         });
 
         browserVideo.addEventListener('click', (e) => {
-            if (!calibrated) {
-                showAlert('Please calibrate first', 'error');
+            if (!calibrated || isCaptured) {
+                if (!calibrated) showAlert('Please calibrate first', 'error');
                 return;
             }
 
@@ -791,6 +936,37 @@
             const x = Math.round((e.clientX - rect.left) * (browserVideo.videoWidth / rect.width));
             const y = Math.round((e.clientY - rect.top) * (browserVideo.videoHeight / rect.height));
             addPoint(x, y);
+        });
+
+        // Click handler for captured image
+        capturedImage.addEventListener('click', (e) => {
+            if (!isCaptured) return;
+
+            const rect = capturedImage.getBoundingClientRect();
+            const scaleX = overlayCanvas.width / rect.width;
+            const scaleY = overlayCanvas.height / rect.height;
+            const x = Math.round((e.clientX - rect.left) * scaleX);
+            const y = Math.round((e.clientY - rect.top) * scaleY);
+
+            capturedPoints.push({x, y});
+            drawOverlay();
+            updateStatusDisplay();
+
+            // Calculate and display measurement
+            if (capturedPoints.length === 2) {
+                const dx = capturedPoints[1].x - capturedPoints[0].x;
+                const dy = capturedPoints[1].y - capturedPoints[0].y;
+                const pixelDist = Math.sqrt(dx * dx + dy * dy);
+                const mmDist = pixelDist / pixelsPerMm;
+
+                measurementsList.innerHTML = `
+                    <div class="measurement-item">
+                        <span><strong>Distance:</strong></span>
+                        <span><strong>${mmDist.toFixed(2)} mm</strong></span>
+                    </div>
+                `;
+                showAlert(`Distance: ${mmDist.toFixed(2)} mm`, 'success');
+            }
         });
 
         // Start with browser camera mode (default)
