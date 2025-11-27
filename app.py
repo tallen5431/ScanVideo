@@ -19,8 +19,8 @@ app = Flask(__name__)
 
 # Configuration
 CALIBRATION_SQUARE_MM = 30.0  # Known size of calibration square in millimeters
-MIN_SQUARE_AREA = 200  # Minimum area in pixels to consider as a square (lowered for better detection)
-MAX_SQUARE_AREA = 200000  # Maximum area in pixels (increased for close-up squares)
+MIN_SQUARE_AREA = 100  # Minimum area in pixels - very relaxed
+MAX_SQUARE_AREA = 500000  # Maximum area in pixels - very relaxed
 
 
 class CalibrationDetector:
@@ -80,7 +80,7 @@ class CalibrationDetector:
             for contour in contours:
                 # Approximate the contour
                 peri = cv2.arcLength(contour, True)
-                if peri < 20:  # Skip very small contours (lowered threshold)
+                if peri < 15:  # Skip only very tiny contours
                     continue
 
                 approx = cv2.approxPolyDP(contour, 0.04 * peri, True)
@@ -89,14 +89,14 @@ class CalibrationDetector:
                 if len(approx) == 4:
                     area = cv2.contourArea(approx)
 
-                    # Filter by area
+                    # Filter by area - very relaxed
                     if MIN_SQUARE_AREA < area < MAX_SQUARE_AREA:
                         # Check if it's roughly square-shaped
                         x, y, w, h = cv2.boundingRect(approx)
                         aspect_ratio = float(w) / h if h > 0 else 0
 
-                        # Accept if aspect ratio is close to 1:1 (square) - relaxed tolerance
-                        if 0.6 < aspect_ratio < 1.7:
+                        # Very relaxed aspect ratio - accept almost any rectangle
+                        if 0.4 < aspect_ratio < 2.5:
                             # Create a unique signature for this square to avoid duplicates
                             signature = (int(x/10)*10, int(y/10)*10, int(w/10)*10, int(h/10)*10)
                             if signature not in seen_squares:
@@ -137,7 +137,7 @@ class CalibrationDetector:
                     x, y, w, h = cv2.boundingRect(approx)
                     aspect_ratio = float(w) / h if h > 0 else 0
                     
-                    if 0.6 < aspect_ratio < 1.7:
+                    if 0.4 < aspect_ratio < 2.5:
                         outer_candidates.append((approx, area, (x, y, w, h)))
         
         if not outer_candidates:
@@ -521,19 +521,30 @@ def api_clear_points():
 @app.route("/api/calibrate_frame", methods=["POST", "OPTIONS"])
 def api_calibrate_frame():
     """Calibrate using a frame sent from browser camera"""
+    print(f"[DEBUG] === CALIBRATE_FRAME ENDPOINT CALLED ===")
+
     # Handle CORS preflight
     if request.method == "OPTIONS":
+        print(f"[DEBUG] Handling OPTIONS request")
         return jsonify({"status": "ok"}), 200
 
-    print(f"[DEBUG] Received calibrate_frame request")
+    print(f"[DEBUG] Method: {request.method}")
     print(f"[DEBUG] Content-Type: {request.content_type}")
-    print(f"[DEBUG] Request method: {request.method}")
+    print(f"[DEBUG] Content-Length: {request.content_length}")
 
     try:
-        data = request.get_json(force=True)
+        # Try to get JSON data
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.get_json(force=True)
+
+        print(f"[DEBUG] Successfully parsed JSON data")
     except Exception as e:
         print(f"[ERROR] Failed to parse JSON: {e}")
-        return jsonify({"error": "Invalid JSON data"}), 400
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Invalid JSON data: {str(e)}"}), 400
 
     if not data:
         print(f"[ERROR] No JSON data in request")
@@ -541,8 +552,12 @@ def api_calibrate_frame():
 
     frame_base64 = data.get("frame")
     auto_mode = data.get("auto", False)
-    
+
+    print(f"[DEBUG] Auto mode: {auto_mode}")
+    print(f"[DEBUG] Frame data length: {len(frame_base64) if frame_base64 else 0}")
+
     if not frame_base64:
+        print(f"[ERROR] No frame data in request")
         return jsonify({"error": "No frame data provided"}), 400
     
     try:
