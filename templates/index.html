@@ -371,6 +371,7 @@
         let cameraMode = 'browser'; // 'server' or 'browser' - default to browser camera
         let browserStream = null;
         let autoCalibrationInterval = null;
+        let isCalibrating = false; // Prevent overlapping calibration requests
 
         const videoFeed = document.getElementById('videoFeed');
         const browserVideo = document.getElementById('browserVideo');
@@ -556,9 +557,9 @@
                 browserVideo.style.display = 'block';
                 loading.style.display = 'none';
 
-                // Start auto-calibration for browser mode
+                // Start auto-calibration for browser mode (1 FPS for better performance)
                 if (autoCalibrationInterval) clearInterval(autoCalibrationInterval);
-                autoCalibrationInterval = setInterval(autoCalibrate, 500);
+                autoCalibrationInterval = setInterval(autoCalibrate, 1000);
 
                 showAlert('Browser camera started. Show calibration square to begin.', 'info');
             } catch (err) {
@@ -581,17 +582,19 @@
         }
 
         async function autoCalibrate() {
-            if (cameraMode !== 'browser' || isCaptured) return;
+            if (cameraMode !== 'browser' || isCaptured || isCalibrating) return;
 
             // Skip if video not ready
             if (browserVideo.videoWidth === 0 || browserVideo.videoHeight === 0) {
                 return;
             }
 
+            isCalibrating = true; // Prevent overlapping requests
+
             // Create canvas with reduced size to minimize payload
             const canvas = document.createElement('canvas');
-            const maxWidth = 800;
-            const maxHeight = 600;
+            const maxWidth = 640;  // Reduced from 800 for better performance
+            const maxHeight = 480; // Reduced from 600 for better performance
             let width = browserVideo.videoWidth;
             let height = browserVideo.videoHeight;
 
@@ -608,7 +611,7 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(browserVideo, 0, 0, width, height);
 
-            const frameData = canvas.toDataURL('image/jpeg', 0.6);
+            const frameData = canvas.toDataURL('image/jpeg', 0.5); // Lower quality for faster processing
 
             try {
                 const response = await fetch(`${basePath}/api/calibrate_frame`, {
@@ -644,6 +647,8 @@
                 }
             } catch (err) {
                 console.error('Auto-calibration error:', err);
+            } finally {
+                isCalibrating = false; // Reset flag to allow next calibration
             }
         }
 
@@ -841,7 +846,7 @@
 
             // Restart auto-calibration for browser mode
             if (cameraMode === 'browser' && !autoCalibrationInterval) {
-                autoCalibrationInterval = setInterval(autoCalibrate, 500);
+                autoCalibrationInterval = setInterval(autoCalibrate, 1000);
             }
         }
 
