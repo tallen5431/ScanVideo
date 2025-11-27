@@ -359,6 +359,10 @@
     </div>
 
     <script>
+        // Detect base path from current URL (e.g., "/scanvideo" or "")
+        const basePath = window.location.pathname.replace(/\/+$/, '').replace(/\/index\.html$/, '') || '';
+        console.log('Base path detected:', basePath);
+
         let calibrated = false;
         let pixelsPerMm = null;
         let measurementPoints = 0;
@@ -483,7 +487,7 @@
             const frameData = canvas.toDataURL('image/jpeg', 0.6);
 
             try {
-                const response = await fetch('/api/calibrate_frame', {
+                const response = await fetch(`${basePath}/api/calibrate_frame`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ frame: frameData, auto: true })
@@ -516,7 +520,7 @@
 
         async function updateFrame() {
             try {
-                const response = await fetch('/api/frame');
+                const response = await fetch(`${basePath}/api/frame`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -539,7 +543,7 @@
 
         async function updateStatus() {
             try {
-                const response = await fetch('/api/status');
+                const response = await fetch(`${basePath}/api/status`);
                 const data = await response.json();
 
                 calibrated = data.calibrated;
@@ -585,7 +589,7 @@
             try {
                 showAlert('Looking for calibration square...', 'info');
 
-                const response = await fetch('/api/calibrate', {
+                const response = await fetch(`${basePath}/api/calibrate`, {
                     method: 'POST'
                 });
 
@@ -635,7 +639,7 @@
 
                 const frameData = canvas.toDataURL('image/jpeg', 0.6);
 
-                const response = await fetch('/api/calibrate_frame', {
+                const response = await fetch(`${basePath}/api/calibrate_frame`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ frame: frameData })
@@ -667,7 +671,7 @@
 
         async function clearPoints() {
             try {
-                const response = await fetch('/api/clear_points', {
+                const response = await fetch(`${basePath}/api/clear_points`, {
                     method: 'POST'
                 });
 
@@ -704,7 +708,7 @@
             }
 
             try {
-                const response = await fetch('/api/add_point', {
+                const response = await fetch(`${basePath}/api/add_point`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ x, y })
