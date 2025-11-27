@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📐 Enhanced CamScan - Calibration Measurement System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .video-section {
+            position: relative;
+            background: #000;
+            min-height: 480px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #videoFeed {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            cursor: crosshair;
+        }
+
+        #browserVideo {
+            max-width: 100%;
+            height: auto;
+            display: none;
+        }
+
+        .loading {
+            color: white;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .controls {
+            padding: 30px;
+        }
+
+        .status-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .status-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .status-value.calibrated {
+            color: #28a745;
+        }
+
+        .status-value.not-calibrated {
+            color: #dc3545;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .measurements {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .measurements h3 {
+            margin-bottom: 15px;
+            color: #212529;
+        }
+
+        .measurement-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .measurement-item:last-child {
+            border-bottom: none;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+
+        .instructions h4 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            color: #856404;
+        }
+
+        .instructions li {
+            margin: 5px 0;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .mode-selector label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📐 Enhanced CamScan</h1>
+            <p>Calibration-based Real-World Measurement System</p>
+        </div>
+
+        <div class="main-content">
+            <div class="video-section">
+                <img id="videoFeed" alt="Video Feed" style="display: none;">
+                <video id="browserVideo" autoplay playsinline></video>
+                <div id="loading" class="loading">Initializing camera...</div>
+            </div>
+
+            <div class="controls">
+                <div id="alertBox" class="alert"></div>
+
+                <div class="mode-selector">
+                    <label>
+                        <input type="radio" name="cameraMode" value="server" checked>
+                        Server Camera
+                    </label>
+                    <label>
+                        <input type="radio" name="cameraMode" value="browser">
+                        Browser Camera
+                    </label>
+                </div>
+
+                <div class="instructions">
+                    <h4>📋 Quick Start:</h4>
+                    <ol>
+                        <li>Show your 30mm calibration square to the camera</li>
+                        <li>Click "Detect Calibration Square" (or wait for auto-detect)</li>
+                        <li>Once calibrated, click on the video to measure distances</li>
+                        <li>Click "Clear Points" to start a new measurement</li>
+                    </ol>
+                </div>
+
+                <div class="status-bar">
+                    <div class="status-item">
+                        <div class="status-label">Calibration Status</div>
+                        <div id="calibrationStatus" class="status-value not-calibrated">Not Calibrated</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Scale (pixels/mm)</div>
+                        <div id="pixelsPerMm" class="status-value">-</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Measurement Points</div>
+                        <div id="pointsCount" class="status-value">0</div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="calibrateBtn" class="btn-success">🎯 Detect Calibration Square</button>
+                    <button id="clearPointsBtn" class="btn-danger">🗑️ Clear Points</button>
+                    <button id="resetCalibrationBtn" class="btn-secondary">🔄 Reset Calibration</button>
+                </div>
+
+                <div id="measurements" class="measurements" style="display: none;">
+                    <h3>📏 Measurements</h3>
+                    <div id="measurementsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let calibrated = false;
+        let pixelsPerMm = null;
+        let measurementPoints = 0;
+        let frameInterval = null;
+        let cameraMode = 'server'; // 'server' or 'browser'
+        let browserStream = null;
+        let autoCalibrationInterval = null;
+
+        const videoFeed = document.getElementById('videoFeed');
+        const browserVideo = document.getElementById('browserVideo');
+        const loading = document.getElementById('loading');
+        const alertBox = document.getElementById('alertBox');
+        const calibrationStatus = document.getElementById('calibrationStatus');
+        const pixelsPerMmDisplay = document.getElementById('pixelsPerMm');
+        const pointsCount = document.getElementById('pointsCount');
+        const measurementsList = document.getElementById('measurementsList');
+        const measurementsDiv = document.getElementById('measurements');
+
+        // Mode selector
+        document.querySelectorAll('input[name="cameraMode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                cameraMode = e.target.value;
+                switchCameraMode();
+            });
+        });
+
+        function switchCameraMode() {
+            if (cameraMode === 'server') {
+                stopBrowserCamera();
+                startServerCamera();
+            } else {
+                stopServerCamera();
+                startBrowserCamera();
+            }
+        }
+
+        function startServerCamera() {
+            browserVideo.style.display = 'none';
+            videoFeed.style.display = 'block';
+            loading.style.display = 'none';
+
+            if (frameInterval) clearInterval(frameInterval);
+            frameInterval = setInterval(updateFrame, 100); // 10 FPS
+            updateStatus();
+        }
+
+        function stopServerCamera() {
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                frameInterval = null;
+            }
+        }
+
+        async function startBrowserCamera() {
+            videoFeed.style.display = 'none';
+            loading.style.display = 'block';
+
+            try {
+                browserStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                browserVideo.srcObject = browserStream;
+                browserVideo.style.display = 'block';
+                loading.style.display = 'none';
+
+                // Start auto-calibration for browser mode
+                if (autoCalibrationInterval) clearInterval(autoCalibrationInterval);
+                autoCalibrationInterval = setInterval(autoCalibrate, 500);
+
+                showAlert('Browser camera started. Show calibration square to begin.', 'info');
+            } catch (err) {
+                console.error('Error accessing browser camera:', err);
+                showAlert('Failed to access camera: ' + err.message, 'error');
+                loading.textContent = 'Camera access denied';
+            }
+        }
+
+        function stopBrowserCamera() {
+            if (autoCalibrationInterval) {
+                clearInterval(autoCalibrationInterval);
+                autoCalibrationInterval = null;
+            }
+            if (browserStream) {
+                browserStream.getTracks().forEach(track => track.stop());
+                browserStream = null;
+            }
+            browserVideo.style.display = 'none';
+        }
+
+        async function autoCalibrate() {
+            if (calibrated || cameraMode !== 'browser') return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = browserVideo.videoWidth;
+            canvas.height = browserVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(browserVideo, 0, 0);
+
+            const frameData = canvas.toDataURL('image/jpeg', 0.8);
+
+            try {
+                const response = await fetch('/api/calibrate_frame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frame: frameData, auto: true })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.calibrated) {
+                    calibrated = true;
+                    pixelsPerMm = data.pixels_per_mm;
+                    updateStatusDisplay();
+                    showAlert('✅ ' + data.message, 'success');
+
+                    // Stop auto-calibration once successful
+                    if (autoCalibrationInterval) {
+                        clearInterval(autoCalibrationInterval);
+                        autoCalibrationInterval = null;
+                    }
+                }
+            } catch (err) {
+                console.error('Auto-calibration error:', err);
+            }
+        }
+
+        async function updateFrame() {
+            try {
+                const response = await fetch('/api/frame');
+                const data = await response.json();
+
+                if (data.error) {
+                    showAlert(data.error, 'error');
+                    return;
+                }
+
+                videoFeed.src = 'data:image/jpeg;base64,' + data.image;
+                calibrated = data.calibrated;
+                pixelsPerMm = data.pixels_per_mm;
+                measurementPoints = data.measurement_points;
+
+                updateStatusDisplay();
+
+            } catch (err) {
+                console.error('Error fetching frame:', err);
+                showAlert('Failed to update video feed', 'error');
+            }
+        }
+
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                calibrated = data.calibrated;
+                pixelsPerMm = data.pixels_per_mm;
+                measurementPoints = data.measurement_points;
+
+                updateStatusDisplay();
+
+            } catch (err) {
+                console.error('Error fetching status:', err);
+            }
+        }
+
+        function updateStatusDisplay() {
+            if (calibrated) {
+                calibrationStatus.textContent = '✅ Calibrated';
+                calibrationStatus.className = 'status-value calibrated';
+                pixelsPerMmDisplay.textContent = pixelsPerMm ? pixelsPerMm.toFixed(2) : '-';
+            } else {
+                calibrationStatus.textContent = '❌ Not Calibrated';
+                calibrationStatus.className = 'status-value not-calibrated';
+                pixelsPerMmDisplay.textContent = '-';
+            }
+
+            pointsCount.textContent = measurementPoints;
+
+            if (measurementPoints > 0) {
+                measurementsDiv.style.display = 'block';
+            } else {
+                measurementsDiv.style.display = 'none';
+            }
+        }
+
+        async function calibrate() {
+            if (cameraMode === 'browser') {
+                await calibrateFromBrowser();
+            } else {
+                await calibrateFromServer();
+            }
+        }
+
+        async function calibrateFromServer() {
+            try {
+                showAlert('Looking for calibration square...', 'info');
+
+                const response = await fetch('/api/calibrate', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('✅ ' + data.message, 'success');
+                    updateStatus();
+                } else {
+                    showAlert('❌ ' + data.message, 'error');
+                }
+
+            } catch (err) {
+                console.error('Calibration error:', err);
+                showAlert('Calibration failed: ' + err.message, 'error');
+            }
+        }
+
+        async function calibrateFromBrowser() {
+            try {
+                showAlert('Looking for calibration square...', 'info');
+
+                const canvas = document.createElement('canvas');
+                canvas.width = browserVideo.videoWidth;
+                canvas.height = browserVideo.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(browserVideo, 0, 0);
+
+                const frameData = canvas.toDataURL('image/jpeg', 0.8);
+
+                const response = await fetch('/api/calibrate_frame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frame: frameData })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    calibrated = true;
+                    pixelsPerMm = data.pixels_per_mm;
+                    updateStatusDisplay();
+                    showAlert('✅ ' + data.message, 'success');
+                } else {
+                    showAlert('❌ ' + data.message, 'error');
+                }
+
+            } catch (err) {
+                console.error('Calibration error:', err);
+                showAlert('Calibration failed: ' + err.message, 'error');
+            }
+        }
+
+        async function clearPoints() {
+            try {
+                const response = await fetch('/api/clear_points', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    measurementPoints = 0;
+                    updateStatusDisplay();
+                    measurementsList.innerHTML = '';
+                    showAlert('Points cleared', 'info');
+                }
+
+            } catch (err) {
+                console.error('Error clearing points:', err);
+                showAlert('Failed to clear points', 'error');
+            }
+        }
+
+        function resetCalibration() {
+            calibrated = false;
+            pixelsPerMm = null;
+            updateStatusDisplay();
+            clearPoints();
+            showAlert('Calibration reset. Show calibration square to recalibrate.', 'info');
+
+            // Restart auto-calibration for browser mode
+            if (cameraMode === 'browser' && !autoCalibrationInterval) {
+                autoCalibrationInterval = setInterval(autoCalibrate, 500);
+            }
+        }
+
+        async function addPoint(x, y) {
+            if (!calibrated) {
+                showAlert('Please calibrate first by showing the calibration square', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/add_point', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ x, y })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    showAlert(data.error, 'error');
+                    return;
+                }
+
+                measurementPoints = data.points;
+                updateStatusDisplay();
+
+                // Display measurements
+                measurementsList.innerHTML = '';
+
+                if (data.distance_mm) {
+                    measurementsList.innerHTML += `
+                        <div class="measurement-item">
+                            <span><strong>Distance:</strong></span>
+                            <span><strong>${data.distance_mm.toFixed(2)} mm</strong></span>
+                        </div>
+                    `;
+                }
+
+                if (data.area_mm2) {
+                    measurementsList.innerHTML += `
+                        <div class="measurement-item">
+                            <span><strong>Area:</strong></span>
+                            <span><strong>${data.area_mm2.toFixed(2)} mm²</strong></span>
+                        </div>
+                    `;
+                }
+
+                if (data.points === 1) {
+                    showAlert('Point 1 added. Click another point to measure distance.', 'info');
+                } else if (data.points === 2) {
+                    showAlert(`Distance: ${data.distance_mm.toFixed(2)} mm`, 'success');
+                } else if (data.points >= 3) {
+                    showAlert(`Area: ${data.area_mm2.toFixed(2)} mm²`, 'success');
+                }
+
+            } catch (err) {
+                console.error('Error adding point:', err);
+                showAlert('Failed to add point', 'error');
+            }
+        }
+
+        function showAlert(message, type) {
+            alertBox.textContent = message;
+            alertBox.className = 'alert alert-' + type;
+            alertBox.style.display = 'block';
+
+            setTimeout(() => {
+                alertBox.style.display = 'none';
+            }, 5000);
+        }
+
+        // Event listeners
+        document.getElementById('calibrateBtn').addEventListener('click', calibrate);
+        document.getElementById('clearPointsBtn').addEventListener('click', clearPoints);
+        document.getElementById('resetCalibrationBtn').addEventListener('click', resetCalibration);
+
+        videoFeed.addEventListener('click', (e) => {
+            const rect = videoFeed.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) * (videoFeed.naturalWidth / rect.width));
+            const y = Math.round((e.clientY - rect.top) * (videoFeed.naturalHeight / rect.height));
+            addPoint(x, y);
+        });
+
+        browserVideo.addEventListener('click', (e) => {
+            if (!calibrated) {
+                showAlert('Please calibrate first', 'error');
+                return;
+            }
+
+            const rect = browserVideo.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) * (browserVideo.videoWidth / rect.width));
+            const y = Math.round((e.clientY - rect.top) * (browserVideo.videoHeight / rect.height));
+            addPoint(x, y);
+        });
+
+        // Start with server camera mode
+        startServerCamera();
+    </script>
+</body>
+</html>

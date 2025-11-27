@@ -36,44 +36,73 @@ class CalibrationDetector:
         """Detect all square-like contours in the frame"""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        
-        # Use adaptive threshold for better detection in varying lighting
-        thresh = cv2.adaptiveThreshold(
-            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+
+        squares = []
+
+        # Try multiple threshold methods for robustness
+        threshold_methods = []
+
+        # Method 1: Adaptive threshold (inverted for black squares)
+        thresh_inv = cv2.adaptiveThreshold(
+            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV, 11, 2
+        )
+        threshold_methods.append(thresh_inv)
+
+        # Method 2: Adaptive threshold (normal for white squares)
+        thresh_normal = cv2.adaptiveThreshold(
+            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY, 11, 2
         )
-        
-        # Also try Canny edge detection
+        threshold_methods.append(thresh_normal)
+
+        # Method 3: Simple binary threshold for black squares
+        _, thresh_binary_inv = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY_INV)
+        threshold_methods.append(thresh_binary_inv)
+
+        # Method 4: Otsu's threshold (inverted)
+        _, thresh_otsu_inv = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        threshold_methods.append(thresh_otsu_inv)
+
+        # Method 5: Canny edge detection
         edges = cv2.Canny(blurred, 50, 150)
-        
-        # Combine both methods
-        combined = cv2.bitwise_or(thresh, edges)
-        
-        # Find contours
-        contours, _ = cv2.findContours(
-            combined, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
-        )
-        
-        squares = []
-        for contour in contours:
-            # Approximate the contour
-            peri = cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, 0.04 * peri, True)
-            
-            # Check if it's a quadrilateral
-            if len(approx) == 4:
-                area = cv2.contourArea(approx)
-                
-                # Filter by area
-                if MIN_SQUARE_AREA < area < MAX_SQUARE_AREA:
-                    # Check if it's roughly square-shaped
-                    x, y, w, h = cv2.boundingRect(approx)
-                    aspect_ratio = float(w) / h if h > 0 else 0
-                    
-                    # Accept if aspect ratio is close to 1:1 (square)
-                    if 0.7 < aspect_ratio < 1.3:
-                        squares.append(approx)
-        
+        threshold_methods.append(edges)
+
+        # Try to find squares in each thresholded image
+        seen_squares = set()
+
+        for thresh in threshold_methods:
+            # Find contours
+            contours, _ = cv2.findContours(
+                thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+            )
+
+            for contour in contours:
+                # Approximate the contour
+                peri = cv2.arcLength(contour, True)
+                if peri < 40:  # Skip very small contours
+                    continue
+
+                approx = cv2.approxPolyDP(contour, 0.04 * peri, True)
+
+                # Check if it's a quadrilateral
+                if len(approx) == 4:
+                    area = cv2.contourArea(approx)
+
+                    # Filter by area
+                    if MIN_SQUARE_AREA < area < MAX_SQUARE_AREA:
+                        # Check if it's roughly square-shaped
+                        x, y, w, h = cv2.boundingRect(approx)
+                        aspect_ratio = float(w) / h if h > 0 else 0
+
+                        # Accept if aspect ratio is close to 1:1 (square)
+                        if 0.7 < aspect_ratio < 1.3:
+                            # Create a unique signature for this square to avoid duplicates
+                            signature = (int(x/10)*10, int(y/10)*10, int(w/10)*10, int(h/10)*10)
+                            if signature not in seen_squares:
+                                seen_squares.add(signature)
+                                squares.append(approx)
+
         return squares
     
     def detect_cube_pattern(self, frame: np.ndarray) -> Tuple[bool, Optional[np.ndarray], Optional[List[np.ndarray]]]:
@@ -345,13 +374,24 @@ def api_get_frame():
     # Try to detect calibration square if not calibrated
     if not detector.is_calibrated():
         found, square = detector.find_calibration_square(frame)
-        if found:
+        if found and square is not None:
             # Draw the calibration square
             cv2.drawContours(frame, [square], -1, (0, 255, 0), 3)
             cv2.putText(
                 frame, "Calibration Square Detected!", (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2
             )
+        else:
+            # Show all detected squares for debugging
+            all_squares = detector.detect_squares(frame)
+            if all_squares:
+                # Draw all detected squares in yellow for debugging
+                for sq in all_squares:
+                    cv2.drawContours(frame, [sq], -1, (0, 255, 255), 2)
+                cv2.putText(
+                    frame, f"Found {len(all_squares)} square(s) - need better match", (10, 60),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2
+                )
     
     # Draw calibration status
     if detector.is_calibrated():
@@ -505,13 +545,13 @@ def api_calibrate_frame():
         if found and square is not None:
             # Draw green rectangle around detected square
             cv2.drawContours(annotated_frame, [square], -1, (0, 255, 0), 3)
-            
+
             # Add "CALIBRATED" text
             cv2.putText(
                 annotated_frame, "CALIBRATED!", (10, 40),
                 cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3
             )
-            
+
             # Show calibration info
             cal_text = f"Scale: {detector.pixels_per_mm:.2f} px/mm"
             cv2.putText(
@@ -519,11 +559,22 @@ def api_calibrate_frame():
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2
             )
         else:
-            # Draw "SEARCHING..." text
-            cv2.putText(
-                annotated_frame, "SEARCHING FOR SQUARE...", (10, 40),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2
-            )
+            # Show all detected squares for debugging
+            all_squares = detector.detect_squares(frame)
+            if all_squares:
+                # Draw all detected squares in yellow for debugging
+                for sq in all_squares:
+                    cv2.drawContours(annotated_frame, [sq], -1, (0, 255, 255), 2)
+                cv2.putText(
+                    annotated_frame, f"Found {len(all_squares)} square(s) - need better match", (10, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 165, 255), 2
+                )
+            else:
+                # Draw "SEARCHING..." text
+                cv2.putText(
+                    annotated_frame, "SEARCHING FOR SQUARE...", (10, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2
+                )
         
         # Encode annotated frame back to base64
         _, buffer = cv2.imencode('.jpg', annotated_frame)
