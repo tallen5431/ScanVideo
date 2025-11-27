@@ -17,6 +17,12 @@ from flask import Flask, render_template, jsonify, request, Response
 
 app = Flask(__name__)
 
+# Add request logging middleware
+@app.before_request
+def log_request():
+    print(f"[REQUEST] {request.method} {request.path} (Full URL: {request.url})")
+    print(f"[REQUEST] Headers: {dict(request.headers)}")
+
 # Configuration
 CALIBRATION_SQUARE_MM = 30.0  # Known size of calibration square in millimeters
 MIN_SQUARE_AREA = 100  # Minimum area in pixels - very relaxed
@@ -663,6 +669,20 @@ def api_test():
             "/api/test"
         ]
     })
+
+
+@app.errorhandler(404)
+def not_found(e):
+    """Handle 404 errors with helpful debug info"""
+    print(f"[404 ERROR] Path not found: {request.path}")
+    print(f"[404 ERROR] Method: {request.method}")
+    print(f"[404 ERROR] Full URL: {request.url}")
+    return jsonify({
+        "error": "Not Found",
+        "path": request.path,
+        "method": request.method,
+        "message": "This endpoint does not exist. Check the /api/test endpoint for available routes."
+    }), 404
 
 
 if __name__ == "__main__":
