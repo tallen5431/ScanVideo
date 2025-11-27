@@ -389,6 +389,8 @@
         let capturedPoints = [];
         let detectionContours = []; // Store latest contours for drawing
         let detectionStatus = "searching";
+        let contoursChanged = false; // Flag to only redraw when contours change
+        let lastAlertTime = 0; // Debounce success alerts
 
         // Update canvas size to match video
         function updateCanvasSize() {
@@ -461,8 +463,9 @@
 
         // Continuous overlay rendering loop
         function renderLoop() {
-            if (!isCaptured && browserVideo.style.display !== 'none') {
+            if (!isCaptured && browserVideo.style.display !== 'none' && contoursChanged) {
                 drawDetectionOverlay();
+                contoursChanged = false;
             }
             requestAnimationFrame(renderLoop);
         }
@@ -627,11 +630,12 @@
                 overlayCanvas.style.display = 'block';
                 updateCanvasSize();
 
-                // Start auto-calibration for browser mode (1 FPS for better performance)
+                // Start auto-calibration for browser mode
                 if (autoCalibrationInterval) clearInterval(autoCalibrationInterval);
-                autoCalibrationInterval = setInterval(autoCalibrate, 1000);
+                autoCalibrationInterval = setInterval(autoCalibrate, 1500); // 1.5s for smoother performance
 
                 // Start continuous overlay rendering
+                contoursChanged = true; // Trigger initial draw
                 renderLoop();
 
                 showAlert('Browser camera started. Show calibration square to begin.', 'info');
@@ -684,14 +688,21 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(browserVideo, 0, 0, width, height);
 
-            const frameData = canvas.toDataURL('image/jpeg', 0.5); // Lower quality for faster processing
+            const frameData = canvas.toDataURL('image/jpeg', 0.4); // Even lower quality for better performance
 
             try {
+                // Add timeout to prevent long-running requests from blocking
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
                 const response = await fetch(`${basePath}/api/calibrate_frame`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ frame: frameData, auto: true })
+                    body: JSON.stringify({ frame: frameData, auto: true }),
+                    signal: controller.signal
                 });
+
+                clearTimeout(timeoutId);
 
                 if (!response.ok) {
                     const text = await response.text();
@@ -705,13 +716,20 @@
                 if (data.contours) {
                     detectionContours = data.contours;
                     detectionStatus = data.status || "searching";
+                    contoursChanged = true; // Trigger redraw
                 }
 
                 if (data.success && data.calibrated) {
                     calibrated = true;
                     pixelsPerMm = data.pixels_per_mm;
                     updateStatusDisplay();
-                    showAlert('✅ ' + data.message, 'success');
+
+                    // Debounce success alerts (only show once every 5 seconds)
+                    const now = Date.now();
+                    if (now - lastAlertTime > 5000) {
+                        showAlert('✅ ' + data.message, 'success');
+                        lastAlertTime = now;
+                    }
                 }
             } catch (err) {
                 console.error('Auto-calibration error:', err);
@@ -866,6 +884,7 @@
                 if (data.contours) {
                     detectionContours = data.contours;
                     detectionStatus = data.status || "searching";
+                    contoursChanged = true; // Trigger redraw
                 }
 
                 if (data.success) {
@@ -911,7 +930,7 @@
 
             // Restart auto-calibration for browser mode
             if (cameraMode === 'browser' && !autoCalibrationInterval) {
-                autoCalibrationInterval = setInterval(autoCalibrate, 1000);
+                autoCalibrationInterval = setInterval(autoCalibrate, 1500);
             }
         }
 
