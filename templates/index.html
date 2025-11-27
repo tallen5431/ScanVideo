@@ -15,34 +15,36 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 10px;
+            margin: 0;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 100%;
             margin: 0 auto;
         }
 
         .header {
             text-align: center;
             color: white;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
 
         .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
+            font-size: 1.5rem;
+            margin-bottom: 5px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
 
         .header p {
-            font-size: 1.1rem;
+            font-size: 0.9rem;
             opacity: 0.9;
+            display: none; /* Hide subtitle on mobile */
         }
 
         .main-content {
             background: white;
-            border-radius: 20px;
+            border-radius: 15px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             overflow: hidden;
         }
@@ -50,10 +52,33 @@
         .video-section {
             position: relative;
             background: #000;
-            min-height: 480px;
+            min-height: 300px;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        #videoFeed, #browserVideo, #capturedImage {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.8;
         }
 
         #videoFeed {
@@ -77,33 +102,35 @@
         }
 
         .controls {
-            padding: 30px;
+            padding: 15px;
         }
 
         .status-bar {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
         }
 
         .status-item {
             background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
+            padding: 12px;
+            border-radius: 8px;
             border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .status-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #6c757d;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 5px;
         }
 
         .status-value {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 600;
             color: #212529;
         }
@@ -118,21 +145,22 @@
 
         .button-group {
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
+            gap: 8px;
+            flex-direction: column;
+            margin-bottom: 15px;
         }
 
         button {
-            padding: 12px 24px;
+            padding: 14px 20px;
             font-size: 1rem;
             font-weight: 600;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
-            flex: 1;
-            min-width: 150px;
+            width: 100%;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         button:hover {
@@ -238,42 +266,11 @@
         }
 
         .instructions {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-        }
-
-        .instructions h4 {
-            margin-bottom: 10px;
-            color: #856404;
-        }
-
-        .instructions ol {
-            margin-left: 20px;
-            color: #856404;
-        }
-
-        .instructions li {
-            margin: 5px 0;
+            display: none; /* Hide on mobile */
         }
 
         .mode-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-        }
-
-        .mode-selector label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-weight: 500;
+            display: none; /* Hide mode selector - auto browser camera only */
         }
 
         @media (max-width: 768px) {
@@ -300,12 +297,12 @@
 
         <div class="main-content">
             <div class="video-section">
-                <div style="position: relative; display: inline-block; max-width: 100%;">
-                    <img id="videoFeed" alt="Video Feed" style="display: none; max-width: 100%; height: auto;">
-                    <video id="browserVideo" autoplay playsinline style="max-width: 100%; height: auto;"></video>
-                    <canvas id="overlayCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0.8;"></canvas>
-                    <img id="capturedImage" alt="Captured Frame" style="display: none; max-width: 100%; height: auto; cursor: crosshair;">
-                    <div id="loading" class="loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">Initializing camera...</div>
+                <div class="video-container">
+                    <img id="videoFeed" alt="Video Feed" style="display: none;">
+                    <video id="browserVideo" autoplay playsinline></video>
+                    <canvas id="overlayCanvas"></canvas>
+                    <img id="capturedImage" alt="Captured Frame" style="display: none; cursor: crosshair;">
+                    <div id="loading" class="loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">📷 Starting camera...</div>
                 </div>
             </div>
 
@@ -349,11 +346,9 @@
                 </div>
 
                 <div class="button-group">
-                    <button id="calibrateBtn" class="btn-success">🎯 Detect Calibration Square</button>
-                    <button id="captureBtn" class="btn-primary" style="display: none;">📸 Capture Frame for Measurement</button>
-                    <button id="retakeBtn" class="btn-info" style="display: none;">🔄 Retake</button>
-                    <button id="clearPointsBtn" class="btn-danger">🗑️ Clear Points</button>
-                    <button id="resetCalibrationBtn" class="btn-secondary">🔄 Reset Calibration</button>
+                    <button id="captureBtn" class="btn-primary" style="display: none;">📸 Capture & Measure</button>
+                    <button id="retakeBtn" class="btn-info" style="display: none;">🔄 New Measurement</button>
+                    <button id="clearPointsBtn" class="btn-danger" style="display: none;">🗑️ Clear Points</button>
                 </div>
 
                 <div id="measurements" class="measurements" style="display: none;">
@@ -484,8 +479,8 @@
             capturedPoints = [];
 
             document.getElementById('captureBtn').style.display = 'none';
-            document.getElementById('retakeBtn').style.display = 'inline-block';
-            document.getElementById('calibrateBtn').style.display = 'none';
+            document.getElementById('retakeBtn').style.display = 'block';
+            document.getElementById('clearPointsBtn').style.display = 'block';
 
             showAlert('Frame captured! Click on the image to add measurement points.', 'success');
         }
@@ -501,9 +496,9 @@
             isCaptured = false;
             capturedPoints = [];
 
-            document.getElementById('captureBtn').style.display = calibrated ? 'inline-block' : 'none';
+            document.getElementById('captureBtn').style.display = calibrated ? 'block' : 'none';
             document.getElementById('retakeBtn').style.display = 'none';
-            document.getElementById('calibrateBtn').style.display = 'inline-block';
+            document.getElementById('clearPointsBtn').style.display = 'none';
 
             clearPoints();
         }
@@ -705,8 +700,8 @@
                 pixelsPerMmDisplay.textContent = pixelsPerMm ? pixelsPerMm.toFixed(2) : '-';
 
                 // Show capture button if not already captured
-                if (!isCaptured && cameraMode === 'browser') {
-                    document.getElementById('captureBtn').style.display = 'inline-block';
+                if (!isCaptured) {
+                    document.getElementById('captureBtn').style.display = 'block';
                 }
             } else {
                 calibrationStatus.textContent = '❌ Not Calibrated';
@@ -929,21 +924,16 @@
         }
 
         // Event listeners
-        document.getElementById('calibrateBtn').addEventListener('click', calibrate);
         document.getElementById('captureBtn').addEventListener('click', captureFrame);
         document.getElementById('retakeBtn').addEventListener('click', retakeFrame);
         document.getElementById('clearPointsBtn').addEventListener('click', () => {
-            if (isCaptured) {
-                capturedPoints = [];
-                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-                updateStatusDisplay();
-                measurementsList.innerHTML = '';
-                showAlert('Points cleared', 'info');
-            } else {
-                clearPoints();
-            }
+            capturedPoints = [];
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            drawOverlay(); // Redraw to clear
+            updateStatusDisplay();
+            measurementsList.innerHTML = '';
+            showAlert('Points cleared', 'info');
         });
-        document.getElementById('resetCalibrationBtn').addEventListener('click', resetCalibration);
 
         // Update canvas size when video loads
         browserVideo.addEventListener('loadedmetadata', updateCanvasSize);
