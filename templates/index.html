@@ -458,6 +458,12 @@
             const canvas = document.createElement('canvas');
             canvas.width = browserVideo.videoWidth;
             canvas.height = browserVideo.videoHeight;
+
+            // Skip if video not ready
+            if (canvas.width === 0 || canvas.height === 0) {
+                return;
+            }
+
             const ctx = canvas.getContext('2d');
             ctx.drawImage(browserVideo, 0, 0);
 
@@ -469,6 +475,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ frame: frameData, auto: true })
                 });
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('Calibration API error:', response.status, text);
+                    return;
+                }
 
                 const data = await response.json();
 
@@ -586,6 +598,12 @@
                 const canvas = document.createElement('canvas');
                 canvas.width = browserVideo.videoWidth;
                 canvas.height = browserVideo.videoHeight;
+
+                if (canvas.width === 0 || canvas.height === 0) {
+                    showAlert('Camera not ready. Please wait...', 'error');
+                    return;
+                }
+
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(browserVideo, 0, 0);
 
@@ -596,6 +614,13 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ frame: frameData })
                 });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API returned error:', response.status, errorText);
+                    showAlert('Server error: ' + response.status, 'error');
+                    return;
+                }
 
                 const data = await response.json();
 
