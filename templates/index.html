@@ -491,7 +491,7 @@
         function retakeFrame() {
             capturedImage.style.display = 'none';
             browserVideo.style.display = 'block';
-            annotatedPreview.style.display = 'none';
+            // Don't hide annotatedPreview - let auto-calibration show it again
             overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
             overlayCanvas.style.display = 'none';
 
@@ -581,7 +581,7 @@
         }
 
         async function autoCalibrate() {
-            if (calibrated || cameraMode !== 'browser') return;
+            if (cameraMode !== 'browser' || isCaptured) return;
 
             // Skip if video not ready
             if (browserVideo.videoWidth === 0 || browserVideo.videoHeight === 0) {
@@ -639,14 +639,8 @@
                     updateStatusDisplay();
                     showAlert('✅ ' + data.message, 'success');
 
-                    // Hide annotated preview, show raw video
-                    annotatedPreview.style.display = 'none';
-
-                    // Stop auto-calibration once successful
-                    if (autoCalibrationInterval) {
-                        clearInterval(autoCalibrationInterval);
-                        autoCalibrationInterval = null;
-                    }
+                    // Keep showing annotated preview with green outline
+                    // Don't stop auto-calibration - keep showing the green outline continuously
                 }
             } catch (err) {
                 console.error('Auto-calibration error:', err);
@@ -808,8 +802,7 @@
                     updateStatusDisplay();
                     showAlert('✅ ' + data.message, 'success');
 
-                    // Hide annotated preview
-                    annotatedPreview.style.display = 'none';
+                    // Keep showing annotated preview with green outline
                 } else {
                     showAlert('❌ ' + data.message, 'error');
                 }
