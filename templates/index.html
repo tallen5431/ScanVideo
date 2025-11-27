@@ -391,6 +391,8 @@
         let detectionStatus = "searching";
         let contoursChanged = false; // Flag to only redraw when contours change
         let lastAlertTime = 0; // Debounce success alerts
+        let scaleFactorX = 1; // Scale factor for contour coordinates
+        let scaleFactorY = 1;
 
         // Update canvas size to match video
         function updateCanvasSize() {
@@ -412,18 +414,23 @@
 
             overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
-            // Draw contours
+            // Draw contours with proper scaling
             detectionContours.forEach(contour => {
                 if (contour.points && contour.points.length > 0) {
                     overlayCtx.beginPath();
-                    overlayCtx.moveTo(contour.points[0][0], contour.points[0][1]);
+                    // Scale coordinates from sent image size to actual video size
+                    const scaledX = contour.points[0][0] * scaleFactorX;
+                    const scaledY = contour.points[0][1] * scaleFactorY;
+                    overlayCtx.moveTo(scaledX, scaledY);
                     for (let i = 1; i < contour.points.length; i++) {
-                        overlayCtx.lineTo(contour.points[i][0], contour.points[i][1]);
+                        const x = contour.points[i][0] * scaleFactorX;
+                        const y = contour.points[i][1] * scaleFactorY;
+                        overlayCtx.lineTo(x, y);
                     }
                     overlayCtx.closePath();
 
                     overlayCtx.strokeStyle = contour.color === 'green' ? '#00FF00' : '#FFFF00';
-                    overlayCtx.lineWidth = contour.thickness || 3;
+                    overlayCtx.lineWidth = (contour.thickness || 3) * Math.max(scaleFactorX, scaleFactorY);
                     overlayCtx.stroke();
                 }
             });
@@ -476,26 +483,45 @@
 
             overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
-            // Draw points
+            // Draw points with larger, more visible markers
             capturedPoints.forEach((point, i) => {
-                overlayCtx.fillStyle = '#FF0000';
+                // Draw outer circle (white background)
+                overlayCtx.fillStyle = '#FFFFFF';
                 overlayCtx.beginPath();
-                overlayCtx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+                overlayCtx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
                 overlayCtx.fill();
 
-                // Draw number
+                // Draw inner circle (red)
+                overlayCtx.fillStyle = '#FF0000';
+                overlayCtx.beginPath();
+                overlayCtx.arc(point.x, point.y, 6, 0, 2 * Math.PI);
+                overlayCtx.fill();
+
+                // Draw number with background
+                const label = String(i + 1);
+                overlayCtx.font = 'bold 20px Arial';
+                const metrics = overlayCtx.measureText(label);
+                const textX = point.x + 15;
+                const textY = point.y - 15;
+
+                // Background for text
+                overlayCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                overlayCtx.fillRect(textX - 5, textY - 18, metrics.width + 10, 24);
+
+                // Text
                 overlayCtx.fillStyle = '#FFFFFF';
                 overlayCtx.strokeStyle = '#FF0000';
-                overlayCtx.font = 'bold 16px Arial';
                 overlayCtx.lineWidth = 3;
-                overlayCtx.strokeText(String(i + 1), point.x + 10, point.y - 10);
-                overlayCtx.fillText(String(i + 1), point.x + 10, point.y - 10);
+                overlayCtx.strokeText(label, textX, textY);
+                overlayCtx.fillText(label, textX, textY);
             });
 
-            // Draw lines between points
+            // Draw lines between points with arrows
             if (capturedPoints.length >= 2) {
                 overlayCtx.strokeStyle = '#FF0000';
-                overlayCtx.lineWidth = 2;
+                overlayCtx.lineWidth = 3;
+                overlayCtx.setLineDash([]);
+
                 overlayCtx.beginPath();
                 overlayCtx.moveTo(capturedPoints[0].x, capturedPoints[0].y);
                 for (let i = 1; i < capturedPoints.length; i++) {
@@ -504,7 +530,7 @@
                 overlayCtx.stroke();
             }
 
-            // Show distance for 2 points
+            // Show distance annotation for 2 points
             if (capturedPoints.length === 2 && calibrated && pixelsPerMm) {
                 const dx = capturedPoints[1].x - capturedPoints[0].x;
                 const dy = capturedPoints[1].y - capturedPoints[0].y;
@@ -514,12 +540,26 @@
                 const midX = (capturedPoints[0].x + capturedPoints[1].x) / 2;
                 const midY = (capturedPoints[0].y + capturedPoints[1].y) / 2;
 
-                overlayCtx.fillStyle = '#FFFFFF';
-                overlayCtx.strokeStyle = '#FF0000';
-                overlayCtx.font = 'bold 20px Arial';
-                overlayCtx.lineWidth = 4;
-                overlayCtx.strokeText(`${mmDist.toFixed(1)} mm`, midX, midY);
-                overlayCtx.fillText(`${mmDist.toFixed(1)} mm`, midX, midY);
+                // Measurement label
+                const distText = `${mmDist.toFixed(2)} mm`;
+                overlayCtx.font = 'bold 28px Arial';
+                const distMetrics = overlayCtx.measureText(distText);
+
+                // Background box for measurement
+                overlayCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                overlayCtx.fillRect(midX - distMetrics.width/2 - 10, midY - 35, distMetrics.width + 20, 40);
+
+                // Border
+                overlayCtx.strokeStyle = '#00FF00';
+                overlayCtx.lineWidth = 2;
+                overlayCtx.strokeRect(midX - distMetrics.width/2 - 10, midY - 35, distMetrics.width + 20, 40);
+
+                // Text
+                overlayCtx.fillStyle = '#00FF00';
+                overlayCtx.strokeStyle = '#000000';
+                overlayCtx.lineWidth = 3;
+                overlayCtx.strokeText(distText, midX - distMetrics.width/2, midY - 10);
+                overlayCtx.fillText(distText, midX - distMetrics.width/2, midY - 10);
             }
         }
 
@@ -712,6 +752,12 @@
 
                 const data = await response.json();
 
+                // Calculate scale factors for contour coordinates
+                if (data.frame_width && data.frame_height) {
+                    scaleFactorX = browserVideo.videoWidth / data.frame_width;
+                    scaleFactorY = browserVideo.videoHeight / data.frame_height;
+                }
+
                 // Update contours for overlay rendering
                 if (data.contours) {
                     detectionContours = data.contours;
@@ -879,6 +925,12 @@
                 }
 
                 const data = await response.json();
+
+                // Calculate scale factors for contour coordinates
+                if (data.frame_width && data.frame_height) {
+                    scaleFactorX = browserVideo.videoWidth / data.frame_width;
+                    scaleFactorY = browserVideo.videoHeight / data.frame_height;
+                }
 
                 // Update contours for overlay rendering
                 if (data.contours) {
