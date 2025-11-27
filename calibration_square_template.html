@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>30mm Calibration Square - Print Template</title>
+    <style>
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .instructions {
+            max-width: 800px;
+            margin: 0 auto 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .instructions h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .instructions ol {
+            line-height: 1.8;
+            color: #555;
+        }
+        
+        .calibration-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .square {
+            width: 30mm;
+            height: 30mm;
+            background: black;
+            margin: 40px auto;
+            border: 2mm solid black;
+        }
+        
+        .label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 20px;
+        }
+        
+        .ruler {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+        
+        .ruler-line {
+            height: 2px;
+            width: 30mm;
+            background: #999;
+            position: relative;
+        }
+        
+        .ruler-tick {
+            position: absolute;
+            width: 2px;
+            height: 10px;
+            background: #999;
+            top: -4px;
+        }
+        
+        .ruler-label {
+            position: absolute;
+            top: -25px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions no-print">
+        <h1>📐 30mm Calibration Square - Print Template</h1>
+        
+        <div class="warning">
+            <strong>⚠️ Important:</strong> For accurate measurements, printer settings must be correct!
+        </div>
+        
+        <h2>Printing Instructions:</h2>
+        <ol>
+            <li><strong>Check Printer Settings</strong>
+                <ul>
+                    <li>Paper size: A4 or Letter</li>
+                    <li>Scale: 100% (No scaling, no "Fit to page")</li>
+                    <li>Orientation: Portrait</li>
+                    <li>Print quality: High/Best</li>
+                </ul>
+            </li>
+            <li><strong>Print this page</strong> - Click the "Print" button below</li>
+            <li><strong>Verify size</strong> - Measure the printed square with a ruler
+                <ul>
+                    <li>Should be exactly 30mm × 30mm</li>
+                    <li>If not, adjust printer scale settings and reprint</li>
+                </ul>
+            </li>
+            <li><strong>Cut out carefully</strong> - For best results, cut along the outer border</li>
+            <li><strong>Optional: Laminate</strong> - Protect the square by laminating it</li>
+        </ol>
+        
+        <h2>Tips for Best Results:</h2>
+        <ul>
+            <li>Use thick paper or cardstock for durability</li>
+            <li>Ensure printer is set to "Actual Size" not "Fit to page"</li>
+            <li>Measure with a metric ruler to verify accuracy</li>
+            <li>Keep the square flat when using with the camera</li>
+            <li>Mount on cardboard or foam board for rigidity</li>
+        </ul>
+        
+        <button onclick="window.print()">🖨️ Print Calibration Square</button>
+        <button onclick="verifySize()">📏 Verify Size After Printing</button>
+    </div>
+    
+    <div class="calibration-container">
+        <h2>30mm Calibration Square</h2>
+        
+        <div class="ruler">
+            <div class="ruler-line">
+                <div class="ruler-tick" style="left: 0;"></div>
+                <div class="ruler-tick" style="left: calc(50% - 1px);"></div>
+                <div class="ruler-tick" style="right: 0;"></div>
+                <div class="ruler-label" style="left: -5px;">0</div>
+                <div class="ruler-label" style="left: calc(50% - 10px);">15mm</div>
+                <div class="ruler-label" style="right: -10px;">30mm</div>
+            </div>
+        </div>
+        
+        <div class="square"></div>
+        
+        <div class="label">
+            <p><strong>30mm × 30mm Black Square</strong></p>
+            <p>Measure this square after printing to verify accuracy</p>
+        </div>
+        
+        <div class="ruler">
+            <div class="ruler-line">
+                <div class="ruler-tick" style="left: 0;"></div>
+                <div class="ruler-tick" style="left: calc(50% - 1px);"></div>
+                <div class="ruler-tick" style="right: 0;"></div>
+                <div class="ruler-label" style="left: -5px;">0</div>
+                <div class="ruler-label" style="left: calc(50% - 10px);">15mm</div>
+                <div class="ruler-label" style="right: -10px;">30mm</div>
+            </div>
+        </div>
+        
+        <p style="margin-top: 40px; color: #999; font-size: 12px;">
+            CamScan Calibration Template v1.0
+        </p>
+    </div>
+    
+    <div class="instructions no-print" style="margin-top: 30px;">
+        <h2>Alternative: Multiple Squares Template</h2>
+        <p>Print multiple squares on one page for backup copies or different mounting options.</p>
+        <button onclick="showMultiple()">🎯 Show Multiple Squares Template</button>
+    </div>
+    
+    <script>
+        function verifySize() {
+            alert('After printing, use a metric ruler to measure the black square.\n\n' +
+                  'It should measure EXACTLY 30mm × 30mm.\n\n' +
+                  'If measurements are off:\n' +
+                  '1. Check printer settings (ensure 100% scale)\n' +
+                  '2. Disable "Fit to page"\n' +
+                  '3. Try printing again\n\n' +
+                  'A 1-2mm error will significantly affect measurement accuracy!');
+        }
+        
+        function showMultiple() {
+            alert('Coming soon! For now, you can:\n' +
+                  '1. Print this page multiple times\n' +
+                  '2. Or cut and paste multiple squares in a document editor\n' +
+                  '3. Always verify each square is exactly 30mm');
+        }
+    </script>
+</body>
+</html>
