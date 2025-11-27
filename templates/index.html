@@ -310,12 +310,12 @@
 
                 <div class="mode-selector">
                     <label>
-                        <input type="radio" name="cameraMode" value="server" checked>
+                        <input type="radio" name="cameraMode" value="server">
                         Server Camera
                     </label>
                     <label>
-                        <input type="radio" name="cameraMode" value="browser">
-                        Browser Camera
+                        <input type="radio" name="cameraMode" value="browser" checked>
+                        Browser Camera (Recommended)
                     </label>
                 </div>
 
@@ -363,7 +363,7 @@
         let pixelsPerMm = null;
         let measurementPoints = 0;
         let frameInterval = null;
-        let cameraMode = 'server'; // 'server' or 'browser'
+        let cameraMode = 'browser'; // 'server' or 'browser' - default to browser camera
         let browserStream = null;
         let autoCalibrationInterval = null;
 
@@ -738,8 +738,8 @@
             addPoint(x, y);
         });
 
-        // Start with server camera mode
-        startServerCamera();
+        // Start with browser camera mode (default)
+        startBrowserCamera();
     </script>
 </body>
 </html>

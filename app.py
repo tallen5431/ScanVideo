@@ -19,8 +19,8 @@ app = Flask(__name__)
 
 # Configuration
 CALIBRATION_SQUARE_MM = 30.0  # Known size of calibration square in millimeters
-MIN_SQUARE_AREA = 500  # Minimum area in pixels to consider as a square
-MAX_SQUARE_AREA = 100000  # Maximum area in pixels
+MIN_SQUARE_AREA = 200  # Minimum area in pixels to consider as a square (lowered for better detection)
+MAX_SQUARE_AREA = 200000  # Maximum area in pixels (increased for close-up squares)
 
 
 class CalibrationDetector:
@@ -80,7 +80,7 @@ class CalibrationDetector:
             for contour in contours:
                 # Approximate the contour
                 peri = cv2.arcLength(contour, True)
-                if peri < 40:  # Skip very small contours
+                if peri < 20:  # Skip very small contours (lowered threshold)
                     continue
 
                 approx = cv2.approxPolyDP(contour, 0.04 * peri, True)
@@ -95,8 +95,8 @@ class CalibrationDetector:
                         x, y, w, h = cv2.boundingRect(approx)
                         aspect_ratio = float(w) / h if h > 0 else 0
 
-                        # Accept if aspect ratio is close to 1:1 (square)
-                        if 0.7 < aspect_ratio < 1.3:
+                        # Accept if aspect ratio is close to 1:1 (square) - relaxed tolerance
+                        if 0.6 < aspect_ratio < 1.7:
                             # Create a unique signature for this square to avoid duplicates
                             signature = (int(x/10)*10, int(y/10)*10, int(w/10)*10, int(h/10)*10)
                             if signature not in seen_squares:
@@ -137,7 +137,7 @@ class CalibrationDetector:
                     x, y, w, h = cv2.boundingRect(approx)
                     aspect_ratio = float(w) / h if h > 0 else 0
                     
-                    if 0.7 < aspect_ratio < 1.3:
+                    if 0.6 < aspect_ratio < 1.7:
                         outer_candidates.append((approx, area, (x, y, w, h)))
         
         if not outer_candidates:
@@ -214,9 +214,12 @@ class CalibrationDetector:
         
         # Fallback to simple square detection
         squares = self.detect_squares(frame)
-        
+
         if not squares:
+            print(f"⊗ No squares detected in frame")
             return False, None
+
+        print(f"⊙ Found {len(squares)} potential square(s)")
         
         # Sort by area (assuming calibration square is prominent)
         squares.sort(key=lambda s: cv2.contourArea(s), reverse=True)
