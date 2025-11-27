@@ -303,7 +303,7 @@
                 <div style="position: relative; display: inline-block; max-width: 100%;">
                     <img id="videoFeed" alt="Video Feed" style="display: none; max-width: 100%; height: auto;">
                     <video id="browserVideo" autoplay playsinline style="max-width: 100%; height: auto;"></video>
-                    <canvas id="overlayCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+                    <canvas id="overlayCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0.8;"></canvas>
                     <img id="capturedImage" alt="Captured Frame" style="display: none; max-width: 100%; height: auto; cursor: crosshair;">
                     <div id="loading" class="loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">Initializing camera...</div>
                 </div>
@@ -473,9 +473,12 @@
             capturedImage.src = canvas.toDataURL('image/jpeg', 0.9);
             capturedImage.style.display = 'block';
             browserVideo.style.display = 'none';
-            overlayCanvas.style.display = 'block';
 
+            // Update canvas for measurement overlay (not detection overlay)
             updateCanvasSize();
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            overlayCanvas.style.display = 'block';
+            overlayCanvas.style.opacity = '1'; // Full opacity for measurement overlay
 
             isCaptured = true;
             capturedPoints = [];
@@ -491,11 +494,12 @@
         function retakeFrame() {
             capturedImage.style.display = 'none';
             browserVideo.style.display = 'block';
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
             overlayCanvas.style.display = 'none';
+            overlayCanvas.style.opacity = '0.8'; // Reset to detection overlay opacity
 
             isCaptured = false;
             capturedPoints = [];
-            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
             document.getElementById('captureBtn').style.display = calibrated ? 'inline-block' : 'none';
             document.getElementById('retakeBtn').style.display = 'none';
@@ -623,6 +627,20 @@
                 }
 
                 const data = await response.json();
+
+                // Display annotated frame with overlays if available
+                if (data.annotated_frame && !isCaptured) {
+                    // Show the annotated frame with detection overlays
+                    const previewImg = new Image();
+                    previewImg.onload = () => {
+                        // Draw the annotated frame on the overlay canvas
+                        updateCanvasSize();
+                        overlayCanvas.style.display = 'block';
+                        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                        overlayCtx.drawImage(previewImg, 0, 0, overlayCanvas.width, overlayCanvas.height);
+                    };
+                    previewImg.src = 'data:image/jpeg;base64,' + data.annotated_frame;
+                }
 
                 if (data.success && data.calibrated) {
                     calibrated = true;
@@ -782,6 +800,18 @@
                 }
 
                 const data = await response.json();
+
+                // Display annotated frame with overlays
+                if (data.annotated_frame && !isCaptured) {
+                    const previewImg = new Image();
+                    previewImg.onload = () => {
+                        updateCanvasSize();
+                        overlayCanvas.style.display = 'block';
+                        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                        overlayCtx.drawImage(previewImg, 0, 0, overlayCanvas.width, overlayCanvas.height);
+                    };
+                    previewImg.src = 'data:image/jpeg;base64,' + data.annotated_frame;
+                }
 
                 if (data.success) {
                     calibrated = true;
