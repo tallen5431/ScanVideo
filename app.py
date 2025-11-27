@@ -518,10 +518,27 @@ def api_clear_points():
     return jsonify({"success": True})
 
 
-@app.route("/api/calibrate_frame", methods=["POST"])
+@app.route("/api/calibrate_frame", methods=["POST", "OPTIONS"])
 def api_calibrate_frame():
     """Calibrate using a frame sent from browser camera"""
-    data = request.json
+    # Handle CORS preflight
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+
+    print(f"[DEBUG] Received calibrate_frame request")
+    print(f"[DEBUG] Content-Type: {request.content_type}")
+    print(f"[DEBUG] Request method: {request.method}")
+
+    try:
+        data = request.get_json(force=True)
+    except Exception as e:
+        print(f"[ERROR] Failed to parse JSON: {e}")
+        return jsonify({"error": "Invalid JSON data"}), 400
+
+    if not data:
+        print(f"[ERROR] No JSON data in request")
+        return jsonify({"error": "No JSON data provided"}), 400
+
     frame_base64 = data.get("frame")
     auto_mode = data.get("auto", False)
     
@@ -612,6 +629,24 @@ def api_status():
         "pixels_per_mm": detector.pixels_per_mm,
         "measurement_points": len(measurement_tool.measurement_points),
         "calibration_square_mm": CALIBRATION_SQUARE_MM
+    })
+
+
+@app.route("/api/test")
+def api_test():
+    """Test endpoint to verify API is working"""
+    return jsonify({
+        "status": "ok",
+        "message": "API is working",
+        "endpoints": [
+            "/api/frame",
+            "/api/calibrate",
+            "/api/calibrate_frame",
+            "/api/add_point",
+            "/api/clear_points",
+            "/api/status",
+            "/api/test"
+        ]
     })
 
 
