@@ -581,60 +581,50 @@ def api_calibrate_frame():
         # Try to find calibration square
         found, square = detector.find_calibration_square(frame)
         
-        # Draw the detected square on the frame for visual feedback
-        annotated_frame = frame.copy()
+        # Prepare contour data for client-side rendering
+        contours_data = []
+        detection_status = "searching"
+
         if found and square is not None:
-            # Draw green rectangle around detected square
-            cv2.drawContours(annotated_frame, [square], -1, (0, 255, 0), 3)
-
-            # Add "CALIBRATED" text
-            cv2.putText(
-                annotated_frame, "CALIBRATED!", (10, 40),
-                cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3
-            )
-
-            # Show calibration info
-            cal_text = f"Scale: {detector.pixels_per_mm:.2f} px/mm"
-            cv2.putText(
-                annotated_frame, cal_text, (10, 80),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2
-            )
+            # Convert square contour to list format for JSON
+            contours_data.append({
+                "points": square.reshape(-1, 2).tolist(),
+                "color": "green",
+                "thickness": 3
+            })
+            detection_status = "calibrated"
         else:
-            # Show all detected squares for debugging
+            # Include all detected squares for debugging (yellow)
             all_squares = detector.detect_squares(frame)
             if all_squares:
-                # Draw all detected squares in yellow for debugging
                 for sq in all_squares:
-                    cv2.drawContours(annotated_frame, [sq], -1, (0, 255, 255), 2)
-                cv2.putText(
-                    annotated_frame, f"Found {len(all_squares)} square(s) - need better match", (10, 40),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 165, 255), 2
-                )
-            else:
-                # Draw "SEARCHING..." text
-                cv2.putText(
-                    annotated_frame, "SEARCHING FOR SQUARE...", (10, 40),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2
-                )
-        
-        # Encode annotated frame back to base64
-        _, buffer = cv2.imencode('.jpg', annotated_frame)
-        annotated_base64 = base64.b64encode(buffer).decode('utf-8')
-        
+                    contours_data.append({
+                        "points": sq.reshape(-1, 2).tolist(),
+                        "color": "yellow",
+                        "thickness": 2
+                    })
+                detection_status = "partial"
+
         if found:
             return jsonify({
                 "success": True,
                 "calibrated": True,
                 "pixels_per_mm": detector.pixels_per_mm,
                 "message": "Calibration successful!",
-                "annotated_frame": annotated_base64
+                "contours": contours_data,
+                "status": detection_status,
+                "frame_width": frame.shape[1],
+                "frame_height": frame.shape[0]
             })
         else:
             return jsonify({
                 "success": False,
                 "calibrated": False,
                 "message": "Searching for calibration square..." if auto_mode else "No calibration square found. Make sure it's visible and well-lit.",
-                "annotated_frame": annotated_base64
+                "contours": contours_data,
+                "status": detection_status,
+                "frame_width": frame.shape[1],
+                "frame_height": frame.shape[0]
             })
     except Exception as e:
         import traceback
